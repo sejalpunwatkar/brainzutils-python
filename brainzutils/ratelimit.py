@@ -155,12 +155,27 @@ def get_view_rate_limit():
 
 
 def on_over_limit(limit):
-    ''' 
-        Set a nice and readable error message for over the limit requests.
-    '''
-    raise TooManyRequests(
-        'You have exceeded your rate limit. See the X-RateLimit-* response headers for more ' \
-        'information on your current rate limit.')
+    """
+    Raise a 429 Too Many Requests error with standard rate limit headers.
+    """
+    error = TooManyRequests(
+        description=(
+            "You have exceeded your rate limit. "
+            "Please retry after the reset time."
+        )
+    )
+
+    # Standard header: seconds until the client can retry
+    error.headers["Retry-After"] = str(limit.seconds_before_reset)
+
+    # Helpful rate-limit headers
+    error.headers["X-RateLimit-Limit"] = str(limit.limit)
+    error.headers["X-RateLimit-Remaining"] = "0"
+    error.headers["X-RateLimit-Reset"] = str(limit.reset)
+    error.headers["X-RateLimit-Reset-In"] = str(limit.seconds_before_reset)
+
+    raise error
+
 
 
 def check_limit_freshness():
